@@ -1,6 +1,6 @@
 // IMPORTANT: Replace with your actual API key
-const GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + GEMINI_API_KEY;
+const GEMINI_API_KEY = 'AIzaSyDmYY4TiI8Ck9nEjXGX_HnrAhGZmtSlwcE';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=' + GEMINI_API_KEY;
 
 // Find all question elements
 const questionElements = document.querySelectorAll('div.qtext');
@@ -56,7 +56,7 @@ questionElements.forEach((questionElement, index) => { // Added index for unique
       return;
     }
 
-    const prompt = `Based on the following question and multiple choice answers, which is the correct answer? Only return the text of the correct answer. If you cannot determine the answer, say "Unable to determine answer".
+    const prompt = `You are an expert in analyzing questions and answers. Based on the following question and the provided multiple choice options, identify ALL correct answer(s). List each correct answer's full text exactly as provided in the options, each on a new line. If you believe no options are correct, or if the question is unanswerable from the given options, respond with 'Unable to determine answer'.
 
 Question:
 ${questionText}
@@ -126,6 +126,7 @@ ${answerOptions.map(opt => `- ${opt.trim()}`).join('\n')}
         answerDisplayDiv.style.padding = '10px';
         answerDisplayDiv.style.border = '1px solid green';
         answerDisplayDiv.style.backgroundColor = '#e6ffe6'; // Light green background
+        answerDisplayDiv.style.whiteSpace = 'pre-line'; // Added to render newlines
 
         // Insert the answer display div after the button
         button.parentNode.insertBefore(answerDisplayDiv, button.nextSibling);
