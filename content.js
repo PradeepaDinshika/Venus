@@ -22,40 +22,51 @@ questionElements.forEach((questionElement, index) => { // Added index for unique
 
   // Extract answer options from the block
   const answerOptions = [];
-  // The choiceTextElement is the div containing the P tag with the answer text.
+  // choiceTextElements are divs with class 'flex-fill ml-1' containing the answer <p>
   const choiceTextElements = answerBlock.querySelectorAll('div.answer div[data-region="answer-label"] div.flex-fill.ml-1');
 
   choiceTextElements.forEach(choiceTextElement => {
-    const text = choiceTextElement.textContent ? choiceTextElement.textContent.trim() : '';
-
-    // Navigate to find the associated input element.
-    // Based on structure: choiceTextElement (div.flex-fill.ml-1)
-    // -> parent is div[data-region="answer-label"]
-    // -> parent of that is div.r0 or div.r1 (let's call it choiceWrapper)
-    // -> input is a child of choiceWrapper
+    const fullText = choiceTextElement.textContent ? choiceTextElement.textContent.trim() : '';
+    let letter = '';
     let inputElement = null;
+
+    // Navigate to find the associated input element and answer number span
     try {
       const dataRegionLabelDiv = choiceTextElement.parentElement; // Should be div[data-region="answer-label"]
       if (dataRegionLabelDiv) {
+        // Extract letter from span.answernumber
+        const answerNumberSpan = dataRegionLabelDiv.querySelector('span.answernumber');
+        if (answerNumberSpan && answerNumberSpan.textContent) {
+          letter = answerNumberSpan.textContent.trim().replace(/\.\s*$/, '').toLowerCase(); // Remove trailing '.' and space, and lowercase
+        } else {
+          console.warn("Could not find span.answernumber or its content for an option.");
+        }
+
+        // Find input element (usually sibling of dataRegionLabelDiv, within a common parent .r0 or .r1)
         const choiceWrapperDiv = dataRegionLabelDiv.parentElement; // Should be div.r0 or div.r1
         if (choiceWrapperDiv) {
           inputElement = choiceWrapperDiv.querySelector('input[type="checkbox"], input[type="radio"]');
+        } else {
+          console.warn("Could not find choiceWrapperDiv (parent of dataRegionLabelDiv).");
         }
+      } else {
+        console.warn("Could not find dataRegionLabelDiv (parent of choiceTextElement).");
       }
     } catch (e) {
-      console.error("Error navigating DOM to find input element:", e);
+      console.error("Error navigating DOM to find input element or letter:", e);
     }
 
-    if (text && inputElement) {
-      answerOptions.push({ text: text, inputElement: inputElement });
+    if (letter && fullText && inputElement) {
+      answerOptions.push({ letter: letter, text: fullText, inputElement: inputElement });
     } else {
-      if (!text) console.warn("Found an answer option without text.");
-      if (!inputElement) console.warn("Found an answer option text but could not find its input element:", text);
+      if (!letter) console.warn("Found an answer option without a letter for text:", fullText);
+      if (!fullText) console.warn("Found an answer option without text for letter:", letter);
+      if (!inputElement) console.warn("Found an answer option but could not find its input element for text:", fullText);
     }
   });
 
   // This log is useful for debugging the new structure
-  console.log("Extracted Answer Options with Inputs:", answerOptions);
+  console.log("Extracted Answer Options with Letters and Inputs:", answerOptions);
 
   if (answerOptions.length === 0) {
     console.warn("No answer options found for question:", questionText);
@@ -85,13 +96,17 @@ questionElements.forEach((questionElement, index) => { // Added index for unique
       return;
     }
 
-    const prompt = `You are an expert in analyzing questions and answers. Based on the following question and the provided multiple choice options, identify ALL correct answer(s). List each correct answer's full text exactly as provided in the options, each on a new line. If you believe no options are correct, or if the question is unanswerable from the given options, respond with 'Unable to determine answer'.
+    const prompt = `You are an expert in analyzing questions and answers. Based on the question and the provided multiple choice options (including their letters and full text), identify the letter(s) corresponding to ALL correct answer(s).
+
+Return *only the letter(s)* (e.g., a or b,d) of the correct answer(s).
+If there are multiple correct answers, separate their letters with a single comma (e.g., b,d).
+If none of the options are correct or if you cannot determine the answer from the information given, respond with the exact phrase 'Unable to determine answer'.
 
 Question:
 ${questionText}
 
 Possible Answers:
-${answerOptions.map(opt => `- ${opt.text.trim()}`).join('\n')}
+${answerOptions.map(opt => `- ${opt.letter}. ${opt.text.trim()}`).join('\n')}
 `;
 
     console.log("Prompt:", prompt);
@@ -139,21 +154,19 @@ ${answerOptions.map(opt => `- ${opt.text.trim()}`).join('\n')}
         const AITextResponse = data.candidates[0].content.parts[0].text;
         console.log('Gemini Answer:', AITextResponse);
 
-        let individualAnswers = [];
+        let individualAnswers = []; // This will now store letters, e.g., ['a', 'd']
         const unableToDeterminePattern = /unable to determine answer/i; // Case-insensitive check
 
         if (unableToDeterminePattern.test(AITextResponse)) {
-          // If the API says it's unable to determine, treat it as a single piece of info.
-          // The existing display logic will show this message.
-          // For marking inputs, we'll have an empty array of actual answers.
-          console.log("API was unable to determine the answer.");
+          console.log("API was unable to determine the answer. No letters to process.");
         } else {
-          // Split by newline and trim each potential answer
-          individualAnswers = AITextResponse.split('\n').map(answer => answer.trim()).filter(answer => answer.length > 0);
+          // API is expected to return letters, possibly comma-separated (e.g., "a", "b,d", "a, d")
+          individualAnswers = AITextResponse.split(',')
+                                          .map(letter => letter.trim().toLowerCase())
+                                          .filter(letter => letter.length > 0);
         }
         
-        console.log('Processed Individual Answers:', individualAnswers); 
-        // This `individualAnswers` array will be used in the next step for matching and marking.
+        console.log('Processed Individual Correct Letters:', individualAnswers); // Updated log message
 
         // --- START LOGIC FOR MARKING INPUTS ---
 
@@ -169,23 +182,18 @@ ${answerOptions.map(opt => `- ${opt.text.trim()}`).join('\n')}
         });
 
         if (individualAnswers.length > 0) {
-          individualAnswers.forEach(apiAnswerText => {
-            const trimmedApiAnswerText = apiAnswerText.trim().toLowerCase(); // Normalize API answer
-            if (trimmedApiAnswerText === "") return; // Skip empty strings if any survived filter
+          individualAnswers.forEach(apiLetter => { // Changed variable name here
+            // apiLetter is already trimmed and lowercased.
+            if (apiLetter === "") return; 
 
             answerOptions.forEach(option => {
-              const trimmedOptionText = option.text.trim().toLowerCase(); // Normalize option text
-
-              // Attempt to match. For more robustness, one might consider partial matches
-              // or string similarity, but for now, we'll use exact match of normalized text.
-              // The prompt asks Gemini for "exact full text".
-              if (trimmedOptionText === trimmedApiAnswerText) {
+              // option.letter is already trimmed and lowercased.
+              if (option.letter === apiLetter) { // Comparison uses option.letter and apiLetter
                 option.inputElement.checked = true;
-                // Optionally, highlight the parent of the input (e.g., the div.r0 or div.r1)
                 if (option.inputElement.parentElement) {
                    option.inputElement.parentElement.classList.add('venus-highlighted-answer');
                 }
-                console.log(`Matched and checked: "${option.text}"`);
+                console.log(`Matched by letter "${apiLetter}", checked: "${option.text}"`); 
               }
             });
           });
