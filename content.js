@@ -168,38 +168,6 @@ ${answerOptions.map(opt => `- ${opt.letter}. ${opt.text.trim()}`).join('\n')}
         
         console.log('Processed Individual Correct Letters:', individualAnswers); // Updated log message
 
-        // --- START LOGIC FOR MARKING INPUTS ---
-
-        // Clear any previous highlights from this extension for this question's options
-        answerOptions.forEach(option => {
-          // Check if parentElement exists before trying to access its classList
-          if (option.inputElement.parentElement) {
-            option.inputElement.parentElement.classList.remove('venus-highlighted-answer');
-          }
-          // If we wanted to uncheck boxes previously checked by this extension, 
-          // we'd need a way to identify them (e.g., another class).
-          // For now, we are not unchecking previously checked user or extension selections.
-        });
-
-        if (individualAnswers.length > 0) {
-          individualAnswers.forEach(apiLetter => { // Changed variable name here
-            // apiLetter is already trimmed and lowercased.
-            if (apiLetter === "") return; 
-
-            answerOptions.forEach(option => {
-              // option.letter is already trimmed and lowercased.
-              if (option.letter === apiLetter) { // Comparison uses option.letter and apiLetter
-                option.inputElement.checked = true;
-                if (option.inputElement.parentElement) {
-                   option.inputElement.parentElement.classList.add('venus-highlighted-answer');
-                }
-                console.log(`Matched by letter "${apiLetter}", checked: "${option.text}"`); 
-              }
-            });
-          });
-        }
-        // --- END LOGIC FOR MARKING INPUTS ---
-
         // --- START MODIFICATION to display answer ---
 
         // Check for and remove an existing answer display for this button
