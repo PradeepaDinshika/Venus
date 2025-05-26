@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Venus Extension Test</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        .qtext { margin-bottom: 5px; font-weight: bold; }
+        .ablock { margin-bottom: 20px; border: 1px solid #ccc; padding: 10px; }
+        .answer .r0, .answer .r1 { margin-bottom: 5px; }
+        .prompt { font-style: italic; color: #555; margin-bottom: 5px;}
+    </style>
+</head>
+<body>
+
+    <h1>Venus Chrome Extension Test Page</h1>
+
+    <p>Instructions:
+        <ol>
+            <li>Load the Venus extension in your browser (ensure Developer Mode is on in chrome://extensions, then "Load unpacked").</li>
+            <li>Open this HTML file in a browser tab.</li>
+            <li><strong>Important:</strong> You must replace <code>'YOUR_GEMINI_API_KEY'</code> in <code>content.js</code> with a valid Gemini API key for the extension to fully work.</li>
+            <li>Click the "Find Answer with Venus" buttons that appear below each question.</li>
+        </ol>
+    </p>
+
+    <hr>
+
+    <h2>Test Question 1 (Multiple Choice)</h2>
+    <div class="qtext"><p>Employees work on projects. Machines are used to support employees project work. Multiple machines could be used for work.</p><p>Which of the following is/are correct with reference to the above description?</p></div>
+    <div class="ablock">
+        <div class="prompt">Select one or more:</div>
+        <div class="answer">
+            <div class="r0">
+                <input type="checkbox" name="q1_choice0" id="q1_choice0">
+                <div class="d-flex w-100" id="q1_choice0_label" data-region="answer-label">
+                    <span class="answernumber">a. </span><div class="flex-fill ml-1"><p>Relationship ‘use’ is an aggregation relationship<br></p></div>
+                </div>
+            </div>
+            <div class="r1">
+                <input type="checkbox" name="q1_choice1" id="q1_choice1">
+                <div class="d-flex w-100" id="q1_choice1_label" data-region="answer-label">
+                    <span class="answernumber">b. </span><div class="flex-fill ml-1"><p>Relationship ‘use’ has M:N cardinality<br></p></div>
+                </div>
+            </div>
+            <div class="r0">
+                <input type="checkbox" name="q1_choice2" id="q1_choice2">
+                <div class="d-flex w-100" id="q1_choice2_label" data-region="answer-label">
+                    <span class="answernumber">c. </span><div class="flex-fill ml-1"><p>Relationship ‘use’ has 1:N cardinality<br></p></div>
+                </div>
+            </div>
+            <div class="r1">
+                <input type="checkbox" name="q1_choice3" id="q1_choice3">
+                <div class="d-flex w-100" id="q1_choice3_label" data-region="answer-label">
+                    <span class="answernumber">d. </span><div class="flex-fill ml-1"><p>Relationship ‘work’ is a ‘Ternary’ relationship<br></p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h2>Test Question 2 (Simple Question)</h2>
+    <div class="qtext"><p>What is the capital of France?</p></div>
+    <div class="ablock">
+        <div class="prompt">Select one:</div>
+        <div class="answer">
+            <div class="r0">
+                <input type="radio" name="q2_choice" id="q2_choice0">
+                <div class="d-flex w-100" id="q2_choice0_label" data-region="answer-label">
+                    <span class="answernumber">a. </span><div class="flex-fill ml-1"><p>London</p></div>
+                </div>
+            </div>
+            <div class="r1">
+                <input type="radio" name="q2_choice" id="q2_choice1">
+                <div class="d-flex w-100" id="q2_choice1_label" data-region="answer-label">
+                    <span class="answernumber">b. </span><div class="flex-fill ml-1"><p>Paris</p></div>
+                </div>
+            </div>
+            <div class="r0">
+                <input type="radio" name="q2_choice" id="q2_choice2">
+                <div class="d-flex w-100" id="q2_choice2_label" data-region="answer-label">
+                    <span class="answernumber">c. </span><div class="flex-fill ml-1"><p>Berlin</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h2>Test Question 3 (No Answer Options - API should still work)</h2>
+    <div class="qtext"><p>Explain the theory of relativity in simple terms.</p></div>
+    <!-- No ablock here, to test robustness. The button should still appear.
+         The content script currently expects an ablock, so this might show a console warning
+         and not provide "answer options" to the API, which is a good test case.
+         The current script might skip adding a button if ablock is missing. We can refine this if needed.
+    -->
+
+
+</body>
+</html>

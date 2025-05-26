@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Venus",
+  "version": "1.0",
+  "description": "Scans questions and answers on a webpage, uses Gemini API to find the correct answer, and displays it on the page.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "https_generativelanguage.googleapis.com/"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "host_permissions": [
+    "https://generativelanguage.googleapis.com/*"
+  ]
+}
