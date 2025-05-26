@@ -22,11 +22,40 @@ questionElements.forEach((questionElement, index) => { // Added index for unique
 
   // Extract answer options from the block
   const answerOptions = [];
-  const answerChoiceElements = answerBlock.querySelectorAll('div.answer div[data-region="answer-label"] div.flex-fill.ml-1');
+  // The choiceTextElement is the div containing the P tag with the answer text.
+  const choiceTextElements = answerBlock.querySelectorAll('div.answer div[data-region="answer-label"] div.flex-fill.ml-1');
 
-  answerChoiceElements.forEach(choiceElement => {
-    answerOptions.push(choiceElement.textContent || choiceElement.innerText);
+  choiceTextElements.forEach(choiceTextElement => {
+    const text = choiceTextElement.textContent ? choiceTextElement.textContent.trim() : '';
+
+    // Navigate to find the associated input element.
+    // Based on structure: choiceTextElement (div.flex-fill.ml-1)
+    // -> parent is div[data-region="answer-label"]
+    // -> parent of that is div.r0 or div.r1 (let's call it choiceWrapper)
+    // -> input is a child of choiceWrapper
+    let inputElement = null;
+    try {
+      const dataRegionLabelDiv = choiceTextElement.parentElement; // Should be div[data-region="answer-label"]
+      if (dataRegionLabelDiv) {
+        const choiceWrapperDiv = dataRegionLabelDiv.parentElement; // Should be div.r0 or div.r1
+        if (choiceWrapperDiv) {
+          inputElement = choiceWrapperDiv.querySelector('input[type="checkbox"], input[type="radio"]');
+        }
+      }
+    } catch (e) {
+      console.error("Error navigating DOM to find input element:", e);
+    }
+
+    if (text && inputElement) {
+      answerOptions.push({ text: text, inputElement: inputElement });
+    } else {
+      if (!text) console.warn("Found an answer option without text.");
+      if (!inputElement) console.warn("Found an answer option text but could not find its input element:", text);
+    }
   });
+
+  // This log is useful for debugging the new structure
+  console.log("Extracted Answer Options with Inputs:", answerOptions);
 
   if (answerOptions.length === 0) {
     console.warn("No answer options found for question:", questionText);
@@ -62,7 +91,7 @@ Question:
 ${questionText}
 
 Possible Answers:
-${answerOptions.map(opt => `- ${opt.trim()}`).join('\n')}
+${answerOptions.map(opt => `- ${opt.text.trim()}`).join('\n')}
 `;
 
     console.log("Prompt:", prompt);
@@ -109,6 +138,59 @@ ${answerOptions.map(opt => `- ${opt.trim()}`).join('\n')}
         
         const AITextResponse = data.candidates[0].content.parts[0].text;
         console.log('Gemini Answer:', AITextResponse);
+
+        let individualAnswers = [];
+        const unableToDeterminePattern = /unable to determine answer/i; // Case-insensitive check
+
+        if (unableToDeterminePattern.test(AITextResponse)) {
+          // If the API says it's unable to determine, treat it as a single piece of info.
+          // The existing display logic will show this message.
+          // For marking inputs, we'll have an empty array of actual answers.
+          console.log("API was unable to determine the answer.");
+        } else {
+          // Split by newline and trim each potential answer
+          individualAnswers = AITextResponse.split('\n').map(answer => answer.trim()).filter(answer => answer.length > 0);
+        }
+        
+        console.log('Processed Individual Answers:', individualAnswers); 
+        // This `individualAnswers` array will be used in the next step for matching and marking.
+
+        // --- START LOGIC FOR MARKING INPUTS ---
+
+        // Clear any previous highlights from this extension for this question's options
+        answerOptions.forEach(option => {
+          // Check if parentElement exists before trying to access its classList
+          if (option.inputElement.parentElement) {
+            option.inputElement.parentElement.classList.remove('venus-highlighted-answer');
+          }
+          // If we wanted to uncheck boxes previously checked by this extension, 
+          // we'd need a way to identify them (e.g., another class).
+          // For now, we are not unchecking previously checked user or extension selections.
+        });
+
+        if (individualAnswers.length > 0) {
+          individualAnswers.forEach(apiAnswerText => {
+            const trimmedApiAnswerText = apiAnswerText.trim().toLowerCase(); // Normalize API answer
+            if (trimmedApiAnswerText === "") return; // Skip empty strings if any survived filter
+
+            answerOptions.forEach(option => {
+              const trimmedOptionText = option.text.trim().toLowerCase(); // Normalize option text
+
+              // Attempt to match. For more robustness, one might consider partial matches
+              // or string similarity, but for now, we'll use exact match of normalized text.
+              // The prompt asks Gemini for "exact full text".
+              if (trimmedOptionText === trimmedApiAnswerText) {
+                option.inputElement.checked = true;
+                // Optionally, highlight the parent of the input (e.g., the div.r0 or div.r1)
+                if (option.inputElement.parentElement) {
+                   option.inputElement.parentElement.classList.add('venus-highlighted-answer');
+                }
+                console.log(`Matched and checked: "${option.text}"`);
+              }
+            });
+          });
+        }
+        // --- END LOGIC FOR MARKING INPUTS ---
 
         // --- START MODIFICATION to display answer ---
 
